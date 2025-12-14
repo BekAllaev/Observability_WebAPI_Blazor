@@ -1,0 +1,6 @@
+@Observability_WebApi_Blazor.Backend_HostAddress = http://localhost:5107
+
+GET {{Observability_WebApi_Blazor.Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
