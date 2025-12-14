@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
   <Project Path="Observability_WebApi_Blazor.Backend/Observability_WebApi_Blazor.Backend.csproj" />
   <Project Path="Observability_WebAPI_Blazor/Observability_WebAPI_Blazor.Client/Observability_WebAPI_Blazor.Client.csproj" />
   <Project Path="Observability_WebAPI_Blazor/Observability_WebAPI_Blazor/Observability_WebAPI_Blazor.csproj" />
