@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Observability_WebAPI_Blazor.Client.Pages;
 using Observability_WebAPI_Blazor.Components;
 
@@ -7,6 +8,21 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+
+builder.Services.AddHttpClient(Options.DefaultName, (sp, client) =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var backendUrl = configuration["BackendUrl"]
+        ?? throw new InvalidOperationException("BackendUrl configuration is missing.");
+
+    client.BaseAddress = new Uri(backendUrl);
+});
+
+builder.Services.AddScoped(sp =>
+{
+    var factory = sp.GetRequiredService<IHttpClientFactory>();
+    return factory.CreateClient(Options.DefaultName);
+});
 
 var app = builder.Build();
 

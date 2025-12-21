@@ -1,0 +1,36 @@
+﻿@page "/pageWithError"
+@rendermode InteractiveAuto
+@inject ILogger<PageWithError> Logger
+
+<PageTitle>Page with error</PageTitle>
+
+<h1>Weather</h1>
+
+<p>This component intentionally throws an error to demonstrate error handling.</p>
+
+
+@code {
+    private WeatherForecast[]? forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Logger.LogError("An error is about to be thrown from PageWithError component."); 
+            throw new InvalidOperationException("This is a simulated exception for demonstration purposes.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An exception occurred in PageWithError component.");
+            throw new Exception("An error occurred while initializing the component.", ex);
+        }
+    }
+
+    private class WeatherForecast
+    {
+        public DateOnly Date { get; set; }
+        public int TemperatureC { get; set; }
+        public string? Summary { get; set; }
+        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    }
+}
