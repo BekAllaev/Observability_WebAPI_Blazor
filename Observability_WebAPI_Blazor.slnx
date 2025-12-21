@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="docker-compose.yml" />
+    <File Path="otel-config.yaml" />
+    <File Path="prometheus.yml" />
     <File Path="README.md" />
   </Folder>
   <Project Path="Observability_WebApi_Blazor.Backend/Observability_WebApi_Blazor.Backend.csproj" />
