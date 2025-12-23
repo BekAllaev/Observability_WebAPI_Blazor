@@ -5,25 +5,22 @@ receivers:
       http:
 
 exporters:
-  logging:
-    loglevel: debug
-
-  prometheus:
-    endpoint: "0.0.0.0:8888"
-
-  jaeger:
-    endpoint: "jaeger:14250"
+  otlp:
+    endpoint: "jaeger:4317"
     tls:
       insecure: true
 
-  seq:
-    endpoint: "http://seq:5341"
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+
+  debug:
+    verbosity: normal
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [logging, jaeger]
+      exporters: [otlp, debug]
 
     metrics:
       receivers: [otlp]

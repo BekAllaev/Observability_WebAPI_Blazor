@@ -8,6 +8,7 @@ services:
       - "5341:80"  # Seq UI
     environment:
       - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
     volumes:
       - seq-data:/data
     restart: unless-stopped
@@ -46,7 +47,7 @@ services:
     ports:
       - "4317:4317"  # OTLP gRPC receiver
       - "55681:55681" # OTLP HTTP receiver
-      - "8888:8888"   # Collector metrics
+      - "8889:8889"   # Collector metrics
     volumes:
       - ./otel-config.yaml:/etc/otel-collector-config.yaml:ro
     command: ["--config", "/etc/otel-collector-config.yaml"]
