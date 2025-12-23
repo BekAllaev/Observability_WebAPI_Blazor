@@ -22,11 +22,5 @@ namespace Observability_WebApi_Blazor.Backend.Controllers
             })
             .ToArray();
         }
-
-        [HttpGet(Name = "error")]
-        public ActionResult GetError()
-        {
-            return BadRequest("Error occurred");
-        }
     }
 }
