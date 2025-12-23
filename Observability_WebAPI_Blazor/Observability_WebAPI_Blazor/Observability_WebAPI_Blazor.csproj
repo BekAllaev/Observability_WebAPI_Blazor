@@ -10,6 +10,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Observability_WebAPI_Blazor.Client\Observability_WebAPI_Blazor.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
+	  <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.14.0" />
+	  <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
   </ItemGroup>
 
 </Project>
