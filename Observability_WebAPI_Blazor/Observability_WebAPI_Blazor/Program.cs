@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Options;
+using Observability_WebAPI_Blazor.Client;
 using Observability_WebAPI_Blazor.Components;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 
@@ -17,15 +20,6 @@ builder.Services.AddHttpClient(Options.DefaultName, (sp, client) =>
         ?? throw new InvalidOperationException("BackendUrl configuration is missing.");
 
     client.BaseAddress = new Uri(backendUrl);
-})
-.ConfigurePrimaryHttpMessageHandler(() =>
-{
-    var handler = new HttpClientHandler();
-    return handler;
-})
-.ConfigureHttpClient((sp, client) =>
-{
-    client.DefaultRequestHeaders.Add("User-Agent", "Blazor-Server");
 });
 
 builder.Services.AddScoped(sp =>
@@ -36,20 +30,21 @@ builder.Services.AddScoped(sp =>
 
 // Serilog bootstrap logger (for startup errors)
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Warning()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .CreateLogger();
 
 builder.Host.UseSerilog((ctx, cfg) =>
 {
+    // If we uncomment these lines we get a lot of default noisy logs from ASP .NET Core
+    // Like: Sending file. Request path: 'lib/bootstrap/dist/css/bootstrap.min
+    // Or : Executing endpoint 'RazorComponentsEndpoint - /_blazor/components/{*pathInfo}'
     cfg.MinimumLevel.Information()
        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-       .Enrich.FromLogContext()
-       .Enrich.WithProperty("Application", "Blazor-Server");
+       .Enrich.FromLogContext();
 
     // Use minimal format for Development, JSON for Production
     if (ctx.HostingEnvironment.IsDevelopment())
     {
+        // Here we configure EVERY message to console
         cfg.WriteTo.Console(
             outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] [{TraceId}] {Message:lj}{NewLine}{Exception}");
     }
@@ -61,6 +56,22 @@ builder.Host.UseSerilog((ctx, cfg) =>
     cfg.WriteTo.Seq(ctx.Configuration["Seq:Url"] ?? "http://localhost:5341");
 });
 
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r=>r.AddService(serviceName: "Observability.Web"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                var endpoint =
+                    builder.Configuration["OpenTelemetry:Tracing:Exporter:Otlp:Endpoint"]
+                    ?? "http://localhost:4317";
+
+                options.Endpoint = new Uri(endpoint);
+            });
+    });
 
 var app = builder.Build();
 
@@ -76,40 +87,10 @@ else
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
-
-app.UseSerilogRequestLogging(options =>
-{
-    // ????????? ??????? ? ??????????? ?????? WebAssembly
-    options.GetLevel = (httpContext, elapsed, ex) =>
-    {
-        if (httpContext.Request.Path.StartsWithSegments("/_framework") ||
-            httpContext.Request.Path.StartsWithSegments("/_content"))
-        {
-            return LogEventLevel.Verbose; // ?? ???????? ? ???????
-        }
-
-        if (ex != null || httpContext.Response.StatusCode >= 500)
-        {
-            return LogEventLevel.Error;
-        }
-
-        if (httpContext.Response.StatusCode >= 400)
-        {
-            return LogEventLevel.Warning;
-        }
-
-        return LogEventLevel.Information;
-    };
-
-    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-    {
-        diagnosticContext.Set("TraceId", httpContext.TraceIdentifier);
-        diagnosticContext.Set("RequestPath", httpContext.Request.Path);
-    };
-});
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

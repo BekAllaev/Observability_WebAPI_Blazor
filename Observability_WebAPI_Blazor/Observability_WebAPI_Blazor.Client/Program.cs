@@ -3,8 +3,6 @@ using Observability_WebAPI_Blazor.Client;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-builder.Services.AddTransient<TraceContextHandler>();
-
 builder.Services.AddHttpClient("Backend", (sp, client) =>
 {
     var url = builder.Configuration["BackendUrl"];
@@ -13,10 +11,9 @@ builder.Services.AddHttpClient("Backend", (sp, client) =>
     {
         throw new InvalidOperationException("BackendUrl configuration is missing.");
     }
-    
+
     client.BaseAddress = new Uri(url);
-})
-.AddHttpMessageHandler<TraceContextHandler>();
+});
 
 builder.Services.AddScoped(sp => 
 { 

@@ -12,6 +12,7 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
+        Logger.LogInformation("PageWithError component is initializing.");
         try
         {
             Logger.LogError("An error is about to be thrown from PageWithError component."); 

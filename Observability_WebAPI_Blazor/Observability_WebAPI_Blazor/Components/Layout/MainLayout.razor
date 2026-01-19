@@ -11,7 +11,25 @@
         </div>
 
         <article class="content px-4">
-            @Body
+            <ErrorBoundary @ref="_errorBoundary">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent>
+                    @if (context.InnerException is not null)
+                    {
+                        @* Here we are interested in exceptions that are re-thrown from catch block *@
+                        @* Exception message contains the class and method names where exception occured *@
+                        <p>Exception message: @context.Message</p>
+                        @* Inner exception message contains message of the exception that breaked application *@
+                        <p>Inner exception message: @context.InnerException.Message</p>
+                    }
+                    else
+                    {
+                        <p>Exception message: @context.Message</p>
+                    }
+                </ErrorContent>
+            </ErrorBoundary>
         </article>
     </main>
 </div>
@@ -21,3 +39,12 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+    }
+}

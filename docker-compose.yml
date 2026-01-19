@@ -1,58 +1,114 @@
-version: '3.8'
-
 services:
+  ## OTEL Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    command: ["--config=/etc/otel-config.yaml"]
+    volumes:
+      - ./otel-config.yaml:/etc/otel-config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "8888:8888" # Collector metrics
+      - "8889:8889" # Prometheus exporter endpoint
+    networks:
+      - nw
+    depends_on:
+      - jaeger
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ## Traces
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: jaeger
+    ports:
+      - "16686:16686" # UI
+    networks:
+      - nw
+
+  ## Logs (Seq)
   seq:
     image: datalust/seq:latest
     container_name: seq
-    ports:
-      - "5341:80"  # Seq UI
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    ports:
+      - "5341:80"
+    networks:
+      - nw
+
+  ## Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
     volumes:
-      - seq-data:/data
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     restart: unless-stopped
+    networks:
+      - nw
 
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"  # Grafana UI
+      - "3001:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
     environment:
+      - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana-data:/var/lib/grafana
     restart: unless-stopped
+    networks:
+      - nw
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+  ## Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Observability_WebApi_Blazor.Backend/Dockerfile
+    container_name: backend
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - Seq__Url=http://seq:80
+      - Jaeger__OtlpEndpoint=http://otel-collector:4317
     ports:
-      - "9090:9090"  # Prometheus UI
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    restart: unless-stopped
+      - "5107:8080"
+    networks:
+      - nw
+    depends_on:
+      - otel-collector
+      - seq
 
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: jaeger
+  ## Blazor Server
+  web:
+    build:
+      context: .
+      dockerfile: Observability_WebAPI_Blazor/Observability_WebAPI_Blazor/Dockerfile
+    container_name: web
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - Seq__Url=http://seq:80
+      - BackendUrl=http://backend:8080
+      - OpenTelemetry__Tracing__Exporter__Otlp__Endpoint=http://otel-collector:4317
     ports:
-      - "16686:16686"  # Jaeger UI
-      - "14250:14250"  # Jaeger OTLP gRPC endpoint
-    restart: unless-stopped
-
-  otel-collector:
-    image: otel/opentelemetry-collector:latest
-    container_name: otel-collector
-    ports:
-      - "4317:4317"  # OTLP gRPC receiver
-      - "55681:55681" # OTLP HTTP receiver
-      - "8889:8889"   # Collector metrics
-    volumes:
-      - ./otel-config.yaml:/etc/otel-collector-config.yaml:ro
-    command: ["--config", "/etc/otel-collector-config.yaml"]
-    restart: unless-stopped
+      - "5075:8080"
+    networks:
+      - nw
+    depends_on:
+      - backend
+      - otel-collector
+      - seq
 
 volumes:
-  seq-data:
-  grafana-data:
+  grafana-storage:
+    driver: local
+
+networks:
+  nw:
+    driver: bridge

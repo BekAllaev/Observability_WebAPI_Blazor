@@ -1,6 +1,8 @@
 ﻿@page "/weatherClient"
-@rendermode InteractiveAuto
+@rendermode @(new InteractiveAutoRenderMode())
 @inject HttpClient HttpClient
+@inject ILogger<WeatherClient> Logger
+@using System.Runtime.InteropServices
 
 <PageTitle>Weather</PageTitle>
 
@@ -42,9 +44,34 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Simulate asynchronous loading to demonstrate streaming rendering
-        var response = await HttpClient.GetAsync("WeatherForecast");
-        forecasts = await response.Content.ReadFromJsonAsync<WeatherForecast[]>();
+        try
+        {
+            // Logger.LogInformation("RenderInfo.Name = {0}, RenderInfo.IsInteractive = {1}, AssignedRenderMode = {2}.", 
+            //     RendererInfo.Name, RendererInfo.IsInteractive, AssignedRenderMode);
+            Logger.LogInformation("Fetching weather data in client component - Weather client.");
+
+            var response = await HttpClient.GetAsync("WeatherForecast");
+
+            if (response.IsSuccessStatusCode == false)
+            {
+                // Logger.LogInformation("RenderInfo.Name = {0}, RenderInfo.IsInteractive = {1}, AssignedRenderMode = {2}.",
+                //     RendererInfo.Name, RendererInfo.IsInteractive, AssignedRenderMode, response.StatusCode);
+                Logger.LogError("Failed to fetch weather data in client component - Weather client. Status Code: {0}", response.StatusCode);
+
+                return;
+            }
+
+            // Logger.LogInformation("RenderInfo.Name = {0}, RenderInfo.IsInteractive = {1}, AssignedRenderMode = {2}", 
+            //     RendererInfo.Name, RendererInfo.IsInteractive, AssignedRenderMode);
+            Logger.LogInformation("Successfully fetched weather data in client component - Weather client.");
+
+            forecasts = await response.Content.ReadFromJsonAsync<WeatherForecast[]>();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching weather data in client component - Weather client.");
+            throw;
+        }
     }
 
     private class WeatherForecast

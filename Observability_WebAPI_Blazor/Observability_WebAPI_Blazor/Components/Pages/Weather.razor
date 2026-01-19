@@ -1,5 +1,5 @@
 ﻿@page "/weather"
-@attribute [StreamRendering]
+@* @attribute [StreamRendering] *@
 @inject HttpClient Http
 @inject ILogger<Weather> Logger
 
@@ -45,23 +45,22 @@ else
     {
         try
         {
+            Logger.LogInformation("RenderInfo.Name = {0}, RenderInfo.IsInteractive = {1}, AssignedRenderMode = {2}.",
+                RendererInfo.Name, RendererInfo.IsInteractive, AssignedRenderMode);
+
             Logger.LogInformation("Calling backend API to get weather forecast");
             forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast");
+
+            Logger.LogInformation("RenderInfo.Name = {0}, RenderInfo.IsInteractive = {1}, AssignedRenderMode = {2}",
+                RendererInfo.Name, RendererInfo.IsInteractive, AssignedRenderMode);
+
             Logger.LogInformation("Successfully received {Count} weather forecasts", forecasts?.Length ?? 0);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error calling backend API");
-            
-            // Fallback to dummy data
-            var startDate = DateOnly.FromDateTime(DateTime.Now);
-            var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
-            forecasts = Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = startDate.AddDays(index),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = summaries[Random.Shared.Next(summaries.Length)]
-            }).ToArray();
+
+            throw;
         }
     }
 

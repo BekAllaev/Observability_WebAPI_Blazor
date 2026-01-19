@@ -11,31 +11,10 @@
     <link rel="stylesheet" href="@Assets["Observability_WebAPI_Blazor.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet/>
 </head>
 
 <body>
-    <ErrorBoundary>
-        <ChildContent>
-            <Routes />
-        </ChildContent>
-        <ErrorContent>
-            <p>Exception occured on the server side</p>
-            @if (context.InnerException is not null)
-            {
-                @* Here we are interested in exceptions that are re-thrown from catch block *@
-                @* Exception message contains the class and method names where exception occured *@
-                <p>Exception message: @context.Message</p>
-                @* Inner exception message contains message of the exception that breaked application *@
-                <p>Inner exception message: @context.InnerException.Message</p>
-            }
-            else
-            {
-                <p>Exception message: @context.Message</p>
-            }
-        </ErrorContent>
-    </ErrorBoundary>
-
     <Routes />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>

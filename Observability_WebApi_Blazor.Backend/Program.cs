@@ -1,3 +1,5 @@
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 
@@ -5,16 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Serilog bootstrap logger
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Warning()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .CreateLogger();
 
 builder.Host.UseSerilog((ctx, cfg) =>
 {
     cfg.MinimumLevel.Information()
        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-       .Enrich.FromLogContext()
-       .Enrich.WithProperty("Application", "Backend");
+       .Enrich.FromLogContext();
 
     if (ctx.HostingEnvironment.IsDevelopment())
     {
@@ -29,6 +28,22 @@ builder.Host.UseSerilog((ctx, cfg) =>
     cfg.WriteTo.Seq(ctx.Configuration["Seq:Url"] ?? "http://localhost:5341");
 });
 
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(serviceName: "Observability.Backend"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                // Jaeger OTLP endpoint (usually collector)
+                options.Endpoint = new Uri(
+                    builder.Configuration["Jaeger:OtlpEndpoint"]
+                    ?? "http://localhost:4317");
+            });
+    });
+
 // Add services to the container.
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -41,15 +56,8 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader()
-              .WithExposedHeaders("traceparent", "tracestate");
+              .AllowAnyHeader();
     });
-});
-
-// Add HTTP logging to capture trace context
-builder.Services.AddHttpLogging(logging =>
-{
-    logging.LoggingFields = Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestPropertiesAndHeaders;
 });
 
 var app = builder.Build();
@@ -60,17 +68,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseSerilogRequestLogging(options =>
+if (!app.Environment.IsDevelopment())
 {
-    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-    {
-        diagnosticContext.Set("TraceId", httpContext.TraceIdentifier);
-        diagnosticContext.Set("RequestPath", httpContext.Request.Path);
-        diagnosticContext.Set("RequestMethod", httpContext.Request.Method);
-    };
-});
-
-app.UseHttpsRedirection();
+    app.UseHttpsRedirection();
+}
 app.UseCors();
 app.UseAuthorization();
 
