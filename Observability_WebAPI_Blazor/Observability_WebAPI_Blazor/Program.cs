@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Observability_WebAPI_Blazor.Client;
 using Observability_WebAPI_Blazor.Components;
@@ -30,7 +31,10 @@ builder.Services.AddScoped(sp =>
     return factory.CreateClient(Options.DefaultName);
 });
 
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    options.AddFilter<LoggingHubFilter>();
+});
 
 builder.Services.AddResponseCompression(opts =>
 {

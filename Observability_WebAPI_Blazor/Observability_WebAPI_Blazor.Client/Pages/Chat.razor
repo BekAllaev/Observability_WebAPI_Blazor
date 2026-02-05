@@ -1,7 +1,8 @@
 @page "/chat"
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveAutoRenderMode(prerender: true))
 @using Microsoft.AspNetCore.SignalR.Client
 @inject NavigationManager Navigation
+@inject ILogger<Chat> Logger
 @implements IAsyncDisposable
 
 <PageTitle>Chat</PageTitle>
@@ -39,16 +40,49 @@
     {
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/blazorChathub"))
+            .ConfigureLogging(logging =>
+            {
+                logging.SetMinimumLevel(LogLevel.Information);
+            })
             .Build();
 
         hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
         {
             var encodedMsg = $"{user}: {message}";
             messages.Add(encodedMsg);
+            Logger.LogInformation(
+                "SignalR message received. User: {User}, MessageLength: {MessageLength}",
+                user,
+                message?.Length ?? 0);
             InvokeAsync(StateHasChanged);
         });
 
-        await hubConnection.StartAsync();
+        hubConnection.Closed += exception =>
+        {
+            if (exception is null)
+            {
+                Logger.LogInformation("SignalR connection closed.");
+            }
+            else
+            {
+                Logger.LogWarning(exception, "SignalR connection closed with error.");
+            }
+
+            return Task.CompletedTask;
+        };
+
+        try
+        {
+            await hubConnection.StartAsync();
+            Logger.LogInformation(
+                "SignalR connection started. ConnectionId: {ConnectionId}",
+                hubConnection.ConnectionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SignalR connection failed to start.");
+            throw;
+        }
     }
 
     private async Task Send()
