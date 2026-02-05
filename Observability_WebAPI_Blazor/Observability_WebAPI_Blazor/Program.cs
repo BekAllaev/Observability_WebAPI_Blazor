@@ -110,6 +110,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(Observability_WebAPI_Blazor.Client._Imports).Assembly);
 
-app.MapHub<ServerChatHub>("/serverChatHub");
+app.MapHub<BlazorChatHub>("/blazorChatHub");
 
 app.Run();

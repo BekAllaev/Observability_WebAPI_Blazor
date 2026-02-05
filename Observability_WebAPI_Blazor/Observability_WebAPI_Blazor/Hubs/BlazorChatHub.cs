@@ -2,7 +2,7 @@
 
 namespace Observability_WebAPI_Blazor.Hubs;
 
-public sealed class ServerChatHub : Hub
+public sealed class BlazorChatHub : Hub
 {
     public Task SendMessage(string user, string message)
     {
