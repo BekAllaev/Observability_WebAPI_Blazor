@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Observability_WebAPI_Blazor.Client;
+using Observability_WebAPI_Blazor.Client.Services;
 using Observability_WebAPI_Blazor.Components;
 using Observability_WebAPI_Blazor.Hubs;
 using OpenTelemetry.Resources;
@@ -86,6 +87,8 @@ builder.Services.AddOpenTelemetry()
                 options.Endpoint = new Uri(endpoint);
             });
     });
+
+builder.Services.AddScoped<BackendChatApiClient>();
 
 var app = builder.Build();
 

@@ -4,3 +4,13 @@ GET {{Observability_WebApi_Blazor.Backend_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+POST {{Observability_WebApi_Blazor.Backend_HostAddress}}/api/chat/send
+Content-Type: application/json
+
+{
+  "user": "user1",
+  "message": "hello from http"
+}
+
+###

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Observability_WebAPI_Blazor.Client;
+using Observability_WebAPI_Blazor.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -20,5 +21,7 @@ builder.Services.AddScoped(sp =>
     var factory = sp.GetRequiredService<IHttpClientFactory>();
     return factory.CreateClient("Backend");
 });
+
+builder.Services.AddScoped<BackendChatApiClient>();
 
 await builder.Build().RunAsync();

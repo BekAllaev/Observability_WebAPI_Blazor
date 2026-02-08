@@ -1,0 +1,142 @@
+@page "/chat-backend"
+@rendermode @(new InteractiveAutoRenderMode(prerender: true))
+@using Microsoft.AspNetCore.SignalR.Client
+@inject HttpClient HttpClient
+@inject Observability_WebAPI_Blazor.Client.Services.BackendChatApiClient ChatApi
+@inject ILogger<ChatBackend> Logger
+@implements IAsyncDisposable
+
+<PageTitle>Chat (Backend)</PageTitle>
+
+<h1>Chat (via Backend)</h1>
+
+<div class="form-group">
+    <label>
+        User:
+        <input @bind="userInput" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+
+<button @onclick="Send" disabled="@(!IsConnected || isSending)">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? hubConnection;
+    private readonly List<string> messages = [];
+    private string? userInput;
+    private string? messageInput;
+    private bool isSending;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpClient.BaseAddress is null)
+        {
+            throw new InvalidOperationException("HttpClient BaseAddress is not configured.");
+        }
+
+        var hubUri = new Uri(HttpClient.BaseAddress, "hubs/chat");
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(hubUri)
+            .ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Information))
+            .Build();
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            var encodedMsg = $"{user}: {message}";
+            messages.Add(encodedMsg);
+
+            Logger.LogInformation(
+                "Backend SignalR message received. User: {User}, MessageLength: {MessageLength}",
+                user,
+                message?.Length ?? 0);
+
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.Closed += exception =>
+        {
+            if (exception is null)
+            {
+                Logger.LogInformation("Backend SignalR connection closed.");
+            }
+            else
+            {
+                Logger.LogWarning(exception, "Backend SignalR connection closed with error.");
+            }
+
+            return Task.CompletedTask;
+        };
+
+        try
+        {
+            Logger.LogInformation("Hub url - {HubUri}", hubUri);
+
+            await hubConnection.StartAsync();
+
+            Logger.LogInformation(
+                "Backend SignalR connection started. ConnectionId: {ConnectionId}",
+                hubConnection.ConnectionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Backend SignalR connection failed to start.");
+            throw;
+        }
+    }
+
+    private async Task Send()
+    {
+        if (isSending)
+        {
+            return;
+        }
+
+        if (HttpClient.BaseAddress is null)
+        {
+            throw new InvalidOperationException("HttpClient BaseAddress is not configured.");
+        }
+
+        isSending = true;
+
+        try
+        {
+            var response = await ChatApi.SendAsync(userInput, messageInput);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.LogError(
+                    "Failed to send chat message via HTTP. StatusCode: {StatusCode}",
+                    response.StatusCode);
+            }
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

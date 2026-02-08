@@ -38,8 +38,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var hubUri = GetHubUri();
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/blazorChathub"))
+            .WithUrl(hubUri)
             .ConfigureLogging(logging =>
             {
                 logging.SetMinimumLevel(LogLevel.Information);
@@ -73,6 +74,7 @@
 
         try
         {
+            Logger.LogInformation("Hub url - {HubUri}", hubUri);
             await hubConnection.StartAsync();
             Logger.LogInformation(
                 "SignalR connection started. ConnectionId: {ConnectionId}",
@@ -83,6 +85,18 @@
             Logger.LogError(ex, "SignalR connection failed to start.");
             throw;
         }
+    }
+
+    private Uri GetHubUri()
+    {
+        const string hubPath = "/blazorChatHub";
+
+        if (!OperatingSystem.IsBrowser())
+        {
+            return new Uri($"http://web:8080{hubPath}");
+        }
+
+        return Navigation.ToAbsoluteUri(hubPath);
     }
 
     private async Task Send()
