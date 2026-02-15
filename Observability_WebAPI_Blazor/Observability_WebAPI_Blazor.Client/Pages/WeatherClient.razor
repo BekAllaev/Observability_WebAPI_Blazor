@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveAutoRenderMode())
 @inject HttpClient HttpClient
 @inject ILogger<WeatherClient> Logger
+@using System.Diagnostics
 @using System.Runtime.InteropServices
 
 <PageTitle>Weather</PageTitle>
@@ -46,18 +47,19 @@ else
     {
         try
         {
-            Logger.LogInformation("Fetching weather data in client component - Weather client.");
+            var traceId = IsProductionServer() ? $"TraceId: {GetTraceId()}" : string.Empty;
+            Logger.LogInformation($"Fetching weather data in client component - Weather client. {traceId}");
 
             var response = await HttpClient.GetAsync("WeatherForecast");
 
             if (response.IsSuccessStatusCode == false)
             {
-                Logger.LogError("Failed to fetch weather data in client component - Weather client. Status Code: {0}", response.StatusCode);
+                Logger.LogError("Failed to fetch weather data in client component - Weather client. Status Code: {StatusCode} {traceId}", response.StatusCode, traceId);
 
                 return;
             }
 
-            Logger.LogInformation("Successfully fetched weather data in client component - Weather client.");
+            Logger.LogInformation("Successfully fetched weather data in client component - Weather client. {traceId}", traceId);
 
             forecasts = await response.Content.ReadFromJsonAsync<WeatherForecast[]>();
         }
@@ -66,6 +68,26 @@ else
             Logger.LogError(ex, "Error fetching weather data in client component - Weather client.");
             throw;
         }
+    }
+
+    private string GetTraceId()
+    {
+        if (Activity.Current is null)
+        {
+            return "Activity.Current is null.";
+        }
+        else
+        {
+            return Activity.Current.TraceId.ToString();
+        }
+    }
+
+    private static bool IsProductionServer()
+    {
+        if (OperatingSystem.IsBrowser())
+            return false;
+
+        return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development";
     }
 
     private class WeatherForecast

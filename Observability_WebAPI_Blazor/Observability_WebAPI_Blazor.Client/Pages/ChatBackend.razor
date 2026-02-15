@@ -1,5 +1,6 @@
 @page "/chat-backend"
 @rendermode @(new InteractiveAutoRenderMode(prerender: true))
+@using System.Diagnostics
 @using Microsoft.AspNetCore.SignalR.Client
 @inject HttpClient HttpClient
 @inject Observability_WebAPI_Blazor.Client.Services.BackendChatApiClient ChatApi
@@ -49,6 +50,7 @@
         }
 
         var hubUri = new Uri(HttpClient.BaseAddress, "hubs/chat");
+        var traceId = IsProductionServer() ? $"TraceId: {GetTraceId()}" : string.Empty;
 
         hubConnection = new HubConnectionBuilder()
             .WithUrl(hubUri)
@@ -61,7 +63,7 @@
             messages.Add(encodedMsg);
 
             Logger.LogInformation(
-                "Backend SignalR message received. User: {User}, MessageLength: {MessageLength}",
+                $"Backend SignalR message received. User: {{User}}, MessageLength: {{MessageLength}} {traceId}",
                 user,
                 message?.Length ?? 0);
 
@@ -72,11 +74,11 @@
         {
             if (exception is null)
             {
-                Logger.LogInformation("Backend SignalR connection closed.");
+                Logger.LogInformation($"Backend SignalR connection closed. {traceId}");
             }
             else
             {
-                Logger.LogWarning(exception, "Backend SignalR connection closed with error.");
+                Logger.LogWarning(exception, $"Backend SignalR connection closed with error. {traceId}");
             }
 
             return Task.CompletedTask;
@@ -84,17 +86,17 @@
 
         try
         {
-            Logger.LogInformation("Hub url - {HubUri}", hubUri);
+            Logger.LogInformation($"Hub url - {{HubUri}} {traceId}", hubUri);
 
             await hubConnection.StartAsync();
 
             Logger.LogInformation(
-                "Backend SignalR connection started. ConnectionId: {ConnectionId}",
+                $"Backend SignalR connection started. ConnectionId: {{ConnectionId}} {traceId}",
                 hubConnection.ConnectionId);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Backend SignalR connection failed to start.");
+            Logger.LogError(ex, $"Backend SignalR connection failed to start. {traceId}");
             throw;
         }
     }
@@ -112,6 +114,7 @@
         }
 
         isSending = true;
+        var traceId = IsProductionServer() ? $"TraceId: {GetTraceId()}" : string.Empty;
 
         try
         {
@@ -120,7 +123,7 @@
             if (!response.IsSuccessStatusCode)
             {
                 Logger.LogError(
-                    "Failed to send chat message via HTTP. StatusCode: {StatusCode}",
+                    $"Failed to send chat message via HTTP. StatusCode: {{StatusCode}} {traceId}",
                     response.StatusCode);
             }
         }
@@ -138,5 +141,25 @@
         {
             await hubConnection.DisposeAsync();
         }
+    }
+
+    private string GetTraceId()
+    {
+        if (Activity.Current is null)
+        {
+            return "Activity.Current is null.";
+        }
+        else
+        {
+            return Activity.Current.TraceId.ToString();
+        }
+    }
+
+    private static bool IsProductionServer()
+    {
+        if (OperatingSystem.IsBrowser())
+            return false;
+
+        return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Development";
     }
 }

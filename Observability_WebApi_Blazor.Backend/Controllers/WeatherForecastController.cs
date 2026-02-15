@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Observability_WebApi_Blazor.Backend.Controllers
@@ -12,16 +13,19 @@ namespace Observability_WebApi_Blazor.Backend.Controllers
         ];
 
         private readonly ILogger<WeatherForecastController> _logger;
+        private readonly IHostEnvironment _hostEnvironment;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IHostEnvironment hostEnvironment)
         {
             _logger = logger;
+            _hostEnvironment = hostEnvironment;
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
-            _logger.LogInformation("Getting weather forecast");
+            var traceId = _hostEnvironment.IsProduction() ? $"TraceId: {GetTraceId()}" : string.Empty;
+            _logger.LogInformation($"Getting weather forecast. {traceId}");
 
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
             {
@@ -30,6 +34,18 @@ namespace Observability_WebApi_Blazor.Backend.Controllers
                 Summary = Summaries[Random.Shared.Next(Summaries.Length)]
             })
             .ToArray();
+        }
+
+        private string GetTraceId()
+        {
+            if (Activity.Current is null)
+            {
+                return "Activity.Current is null.";
+            }
+            else
+            {
+                return Activity.Current.TraceId.ToString();
+            }
         }
     }
 }

@@ -1,7 +1,8 @@
 ﻿@page "/weather"
-@* @attribute [StreamRendering] *@
+@using System.Diagnostics
 @inject HttpClient Http
 @inject ILogger<Weather> Logger
+@inject IHostEnvironment HostEnvironment
 
 <PageTitle>Weather</PageTitle>
 
@@ -45,16 +46,29 @@ else
     {
         try
         {
-            Logger.LogInformation("Calling backend API to get weather forecast");
+            var traceId = HostEnvironment.IsProduction() ? $"TraceId: {GetTraceId()}" : string.Empty;
+            Logger.LogInformation($"Calling backend API to get weather forecast. {traceId}");
             forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast");
 
-            Logger.LogInformation("Successfully received {Count} weather forecasts", forecasts?.Length ?? 0);
+            Logger.LogInformation("Successfully received {Count} weather forecasts {traceId}", forecasts?.Length ?? 0, traceId);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error calling backend API");
 
             throw;
+        }
+    }
+
+    private string GetTraceId()
+    {
+        if (Activity.Current is null)
+        {
+            return "Activity.Current is null.";
+        }
+        else
+        {
+            return Activity.Current.TraceId.ToString();
         }
     }
 
