@@ -7,7 +7,6 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY Observability_WebAPI_Blazor.Shared/Observability_WebAPI_Blazor.Shared.csproj Observability_WebAPI_Blazor.Shared/
 COPY Observability_WebAPI_Blazor/Observability_WebAPI_Blazor.Client/Observability_WebAPI_Blazor.Client.csproj Observability_WebAPI_Blazor/Observability_WebAPI_Blazor.Client/
 COPY Observability_WebAPI_Blazor/Observability_WebAPI_Blazor/Observability_WebAPI_Blazor.csproj Observability_WebAPI_Blazor/Observability_WebAPI_Blazor/
 RUN dotnet restore Observability_WebAPI_Blazor/Observability_WebAPI_Blazor/Observability_WebAPI_Blazor.csproj
