@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="docker-compose.yml" />
-    <File Path="loki-config.yaml" />
     <File Path="otel-config.yaml" />
     <File Path="prometheus.yml" />
     <File Path="README.md" />
