@@ -45,14 +45,8 @@ else
     {
         try
         {
-            Logger.LogInformation("RenderInfo.Name = {0}, RenderInfo.IsInteractive = {1}, AssignedRenderMode = {2}.",
-                RendererInfo.Name, RendererInfo.IsInteractive, AssignedRenderMode);
-
             Logger.LogInformation("Calling backend API to get weather forecast");
             forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast");
-
-            Logger.LogInformation("RenderInfo.Name = {0}, RenderInfo.IsInteractive = {1}, AssignedRenderMode = {2}",
-                RendererInfo.Name, RendererInfo.IsInteractive, AssignedRenderMode);
 
             Logger.LogInformation("Successfully received {Count} weather forecasts", forecasts?.Length ?? 0);
         }
