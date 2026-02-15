@@ -91,7 +91,7 @@
     {
         const string hubPath = "/blazorChatHub";
 
-        if (!OperatingSystem.IsBrowser())
+        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") is "true")
         {
             return new Uri($"http://web:8080{hubPath}");
         }
