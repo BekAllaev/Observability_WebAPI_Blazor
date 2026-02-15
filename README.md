@@ -1,4 +1,4 @@
-# Observability_WebAPI_Blazor
+# Observability in .NET 10: Blazor Web App + Backend API with Logging, Tracing, and Metrics
 
 A demo project showing how to wire up and use **Observability** (logging, tracing, and metrics) in a .NET 10 application composed of a **Blazor Web App** and a **Backend Web API**.
 
@@ -24,10 +24,14 @@ The solution consists of two services running in Docker:
 └──────┬───────┘                   └──────┬───────┘
        │                                  │
        │  OTLP (traces)                   │  OTLP (traces)
-       ▼                                  ▼
-┌──────────────────┐         ┌──────────────────┐
-│  OTel Collector  │────────►│     Jaeger       │  ← traces UI (:16686)
-└────────┬─────────┘         └──────────────────┘
+       ▼                                  │
+┌──────────────────┐                      │
+│  OTel Collector  │◄─────────────────────┘
+└────────┬─────────┘
+         │
+         └──────────────────────────────►┌──────────────────┐
+         |                               │     Jaeger       │  ← traces UI (:16686)
+         |                               └──────────────────┘
          │  Prometheus
          ▼
 ┌──────────────┐      ┌──────────────┐
@@ -164,6 +168,26 @@ exporters:
 ```
 
 Prometheus scrapes the Collector endpoint every 15 seconds (`prometheus.yml`), and Grafana connects to Prometheus as a data source for dashboard visualization.
+
+### Grafana: How to Read the Metrics
+
+![Grafana dashboard](docs/grafana.png)
+
+Grafana (http://localhost:3001, default credentials `admin` / `admin`) is used to visualize the metrics that flow through the pipeline:
+
+`Blazor` + `Backend API` → OTLP (metrics) → `OpenTelemetry Collector` → Prometheus exporter → `Prometheus` → `Grafana`.
+
+Typical dashboards for this demo focus on **RED metrics** (Rate, Errors, Duration) per service and per route:
+
+- **RPS (Requests per second)** by service (e.g., `Observability.Backend`, `Observability.Web`).
+- **5xx errors/sec** by service.
+- **Latency percentiles** (for example P95) by service.
+- **Top routes by RPS** (e.g., `WeatherForecast`, `/weather`, `/weatherClient`).
+
+This is useful for quickly spotting:
+- which service generates the most traffic,
+- which endpoints are the slowest,
+- and whether errors spike during load.
 
 ### End-to-End Example: What Happens When You Open the Weather Page
 
