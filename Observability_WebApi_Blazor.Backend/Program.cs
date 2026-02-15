@@ -3,6 +3,7 @@ using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using Observability_WebApi_Blazor.Backend.Hubs;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,7 +39,19 @@ builder.Services.AddOpenTelemetry()
             .AddHttpClientInstrumentation()
             .AddOtlpExporter(options =>
             {
-                // Jaeger OTLP endpoint (usually collector)
+                options.Endpoint = new Uri(
+                    builder.Configuration["Jaeger:OtlpEndpoint"]
+                    ?? "http://localhost:4317");
+            });
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()   // http.server.request.duration, active_requests
+            .AddHttpClientInstrumentation()    // http.client.request.duration
+            .AddRuntimeInstrumentation()       // GC, threadpool, assemblies
+            .AddOtlpExporter(options =>
+            {
                 options.Endpoint = new Uri(
                     builder.Configuration["Jaeger:OtlpEndpoint"]
                     ?? "http://localhost:4317");

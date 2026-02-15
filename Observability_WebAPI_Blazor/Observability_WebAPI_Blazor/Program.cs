@@ -5,6 +5,7 @@ using Observability_WebAPI_Blazor.Client;
 using Observability_WebAPI_Blazor.Client.Services;
 using Observability_WebAPI_Blazor.Components;
 using Observability_WebAPI_Blazor.Hubs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -78,6 +79,21 @@ builder.Services.AddOpenTelemetry()
         tracing
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                var endpoint =
+                    builder.Configuration["OpenTelemetry:Tracing:Exporter:Otlp:Endpoint"]
+                    ?? "http://localhost:4317";
+
+                options.Endpoint = new Uri(endpoint);
+            });
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
             .AddOtlpExporter(options =>
             {
                 var endpoint =
