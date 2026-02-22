@@ -295,6 +295,28 @@ This page demonstrates a fundamental aspect of the **Interactive Auto render mod
 | Trace in Jaeger | ✅ Yes — full cross-service trace | ❌ No — browser HTTP calls are not instrumented |
 | Backend URL | `http://backend:8080` (Docker internal) | `http://localhost:5107` (public port) |
 
+### End-to-End Example: What Happens When You Open the PageWithError Page
+
+The **PageWithError** page (`/pageWithError`) is designed specifically to demonstrate **exception handling and error logging** in a Blazor application with full observability integration. It intentionally throws an exception during component initialization and shows how errors propagate through the system.
+
+#### Step-by-step flow
+
+1. The browser navigates to `/pageWithError`.
+2. Because the component uses `InteractiveAuto` render mode (with prerendering enabled by default), Blazor renders it **on the server** first via SignalR.
+3. During `OnInitializedAsync`, the component:
+   - Logs `"PageWithError component is initializing."` at **Information** level.
+   - Logs `"An error is about to be thrown from PageWithError component."` at **Error** level.
+   - Throws an `InvalidOperationException` with message `"This is a simulated exception for demonstration purposes."`
+   - Catches the exception, logs it with full stack trace: `"An exception occurred in PageWithError component."`
+   - Re-throws the exception wrapped in a new `Exception`: `"An error occurred while initializing the component."`
+4. The `ErrorBoundary` component in `MainLayout.razor` catches the exception and renders the error UI instead of the component content.
+5. The user sees the error message on the page:
+   - `Exception message: An error occurred while initializing the component.`
+   - `Inner exception message: This is a simulated exception for demonstration purposes.`
+
+#### What you see in Seq
+
+![Seq logs for PageWithError](docs/seq-pagewitherror-logs.png)
 ---
 
 ## Getting Started
