@@ -317,6 +317,58 @@ The **PageWithError** page (`/pageWithError`) is designed specifically to demons
 #### What you see in Seq
 
 ![Seq logs for PageWithError](docs/seq-pagewitherror-logs.png)
+
+In Seq (http://localhost:5341), you can see the expected error lifecycle in order:
+
+| Timestamp | Level | Message |
+|---|---|---|
+| 21:58:41.670 | Info | `PageWithError component is initializing.` |
+| 21:58:41.670 | Error | `An error is about to be thrown from PageWithError component.` |
+| 21:58:41.671 | Error | `An exception occurred in PageWithError component.` |
+
+### End-to-End Example: What Happens When You Open the Chat Page
+
+The **Chat** page (`/chat`) demonstrates real-time messaging through Blazor's own SignalR hub (`BlazorChatHub`) with connection-level and method-level logging.
+
+#### Step-by-step flow
+
+1. The browser opens `/chat`.
+2. `Chat.razor` creates a `HubConnection` to `/blazorChatHub`, logs hub URL, and starts the connection.
+3. `LoggingHubFilter` logs connection lifecycle events (`opened`, `closed`) and hub method execution (`invoked`, `completed`).
+4. When a user clicks **Send**, the component calls `SendAsync("SendMessage", userInput, messageInput)`.
+5. `BlazorChatHub.SendMessage` broadcasts to all clients via `Clients.All.SendAsync("ReceiveMessage", user, message)`.
+6. Each connected client receives the message, updates the UI list, and logs user + message length.
+
+#### What you see in Seq
+
+![Chat SignalR message logs](docs/Signlar-chat-2.png)
+![Chat SignalR lifecycle logs](docs/Signlar-chat.png)
+
+> **Note:** It is expected to see many repeated `SignalR hub method invoked.` / `SignalR hub method completed.` entries.
+> 
+> This happens because `LoggingHubFilter` is registered globally and logs **every** hub invocation, including framework-level SignalR traffic. With `InteractiveAuto` and prerendering enabled, the component can also reconnect between render phases, which adds extra connection and hub-method logs.
+
+For chat behavior analysis, focus on logs related to connection lifecycle and message handling:
+
+- `Hub url - http://web:8080/blazorChatHub TraceId: ...`
+- `SignalR connection started. ConnectionId: ... TraceId: ...`
+- `SignalR connection opened. ConnectionId: ..., UserIdentifier: null`
+- `SignalR hub method invoked`
+- `SignalR hub method completed`
+- `SignalR message received. User: User1, MessageLength: 11 TraceId: ...`
+- `SignalR message received. User: User2, MessageLength: 11 TraceId: ...`
+- `SignalR connection closed. ConnectionId: ..., UserIdentifier: null`
+
+#### Why this example matters
+
+| Aspect | What you observe |
+|---|---|
+| Connection observability | Start/open/close events with `ConnectionId`. |
+| Hub method observability | `invoked`/`completed` logs from `LoggingHubFilter`. |
+| Message observability | Received messages include `User` and `MessageLength`. |
+| Correlation | Server-side logs include `TraceId` for grouping related events. |
+| Topology clarity | `Chat.razor` communicates directly with Blazor hub (`/blazorChatHub`), not Backend API hub. |
+
 ---
 
 ## Getting Started
@@ -379,4 +431,3 @@ Once running, the following UIs are available:
 ├── docker-compose.yml                        # All services + infrastructure
 ├── otel-config.yaml                          # OpenTelemetry Collector configuration
 └── prometheus.yml                            # Prometheus configuration
-```
